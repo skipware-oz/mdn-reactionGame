@@ -1,0 +1,256 @@
+<!--
+  The game will have two players, one of whom controls the game 
+  using the 'A' key, and the other with the 'L' key.
+
+  When the Start button is pressed, a spinner like the one we saw 
+  earlier is displayed for a random amount of time between 5 and 
+  10 seconds. After that time, a message will appear saying 
+  "PLAYERS GO!!" — once this happens, the first player to press 
+  their control button will win the game.
+
+  The asynchronous code set up by these functions [setTimeout(), 
+  setInterval(), requestAnimationFrame()] runs on the main thread 
+  (after their specified timer has elapsed).
+
+  It's important to know that you can (and often will) run other 
+  code before a setTimeout() call executes, or between iterations 
+  of setInterval(). Depending on how processor-intensive these 
+  operations are, they can delay your async code even further, as 
+  any async code will execute only after the main thread is available. 
+  (In other words, when the stack is empty.)  
+
+  In any case, these functions are used for running constant animations 
+  and other background processing on a web site or application.
+
+  ### Note ###:
+  To create new threads, use worker.js
+  
+  Conclusion:
+  All the essentials of async loops and intervals covered in one 
+  article. You'll find these methods useful in a lot of situations, 
+  but take care not to overuse them! Because they they still run 
+  on the main thread, heavy and intensive callbacks (especially those 
+  that manipulate the DOM) can really slow down a page if you're not 
+  careful.
+
+  Links:
+  - this tutorial:
+    asynch  : https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Asynchronous/Timeouts_and_intervals
+
+  - css examples:
+    display : https://developer.mozilla.org/en-US/docs/Web/CSS/display
+      order : https://developer.mozilla.org/en-US/docs/Web/CSS/order
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>2-player reaction game</title>
+    <!--
+      we could have used external css resouce with a <link> attribute but 
+      here decided to use internal css definitions with the <style> tag.
+    -->
+    <style>
+
+      /* General styles */
+
+      html {
+        background-color: white;
+        height: 100%;
+        font-family: sans-serif;
+      }
+
+      body {
+        height: inherit;
+        background-color: red;
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      /* UI Layout */
+
+      section {
+        width: 100%;
+        height: inherit;
+        padding: 30px;
+      }
+
+      .topbar {
+        height: 50%;
+        display: flex;  /* children elements can use the 'order' directive */
+        justify-content: space-between;
+      }
+
+      .topbar p, button {
+        margin: 0;
+        font-size: 1.5rem;
+        border: 5px solid;
+        border-radius: 20px;
+        padding: 10px 20px;
+      }
+
+      .p1, .p2 {
+        align-self: flex-start;
+      }
+
+      .topbar .p1 {
+        order: 0;   /* specifies the order elements are laid out within a parent element with display of flex or grid. */
+        border-color: yellow;
+        color: yellow;
+      }
+
+      .topbar .p2 {
+        order: 2;
+        border-color: cyan;
+        color: cyan;
+      }
+
+      .topbar .middlebar {
+        order: 1;
+      }
+
+      .middlebar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* Button-specific styling */
+
+      button {
+        border: 0;
+        padding: 12.75px 20px;
+        background-color: #ddd;
+        cursor: pointer;
+      }
+
+      button:hover, button:focus {
+        background-color: #eee;
+      }
+
+      button:active {
+        background-color: #fff;
+      }
+
+      /* spinner-specific styling */
+
+      .spinner {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+
+      .spinner div {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spinner p {
+        margin: 0;
+        font-size: 10rem;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="spinner"><div><p>↻</p></div></div>
+
+    <section class="ui">
+      <div class="topbar">
+        <p class="p1">Player 1: "A"</p>
+        <p class="p2">Player 2: "L"</p>
+        <div class="middlebar">
+          <button>Start game</button>
+          <p class="result"></p>
+        </div>
+      </div>
+    </section>
+    <script>
+      const spinner = document.querySelector('.spinner p');
+      const spinnerContainer = document.querySelector('.spinner');
+      let rotateCount = 0;
+      let startTime = null;
+      let rAF;
+      const btn = document.querySelector('button');
+      const result = document.querySelector('.result');
+
+      function random(min,max) {
+        var num = Math.floor(Math.random()*(max-min)) + min;
+        return num;
+      }
+
+      function draw(timestamp) {
+        if(!startTime) {
+        startTime = timestamp;
+        }
+
+        rotateCount = (timestamp - startTime) / 3;
+      
+        if(rotateCount > 359) {
+          rotateCount %= 360;
+        }
+
+        spinner.style.transform = 'rotate(' + rotateCount + 'deg)';
+        rAF = requestAnimationFrame(draw);
+      }
+
+      //  hide the results paragraph and spinner container 
+      result.style.display = 'none';
+      spinnerContainer.style.display = 'none';
+
+      function reset() {
+        btn.style.display = 'block';
+        result.textContent = '';
+        result.style.display = 'none';
+      }
+
+      btn.addEventListener('click', start);
+
+      function start() {
+        draw();
+        spinnerContainer.style.display = 'block';
+        btn.style.display = 'none';
+        setTimeout(setEndgame, random(5000,10000));
+      }
+
+      function setEndgame() {
+        cancelAnimationFrame(rAF);
+        spinnerContainer.style.display = 'none';
+        result.style.display = 'block';
+        result.textContent = 'PLAYERS GO!!';
+
+        document.addEventListener('keydown', keyHandler);
+
+        function keyHandler(e) {
+          let isOver = false;
+          console.log(e.key);
+          
+          if (e.key === "a") {
+            result.textContent = 'Player 1 won!!';
+            isOver = true;
+          } else if (e.key === "l") {
+            result.textContent = 'Player 2 won!!';
+            isOver = true;
+          }
+
+          if (isOver) {
+            document.removeEventListener('keydown', keyHandler);
+            setTimeout(reset, 5000);
+          }
+        };
+      }
+
+    </script>
+  </body>
+</html>
+
